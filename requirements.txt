@@ -1,0 +1,3 @@
+selenium>=4.4.0
+# Optional: aide pour télécharger automatiquement ChromeDriver
+# webdriver-manager>=3.8.5

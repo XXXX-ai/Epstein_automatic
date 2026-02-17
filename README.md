@@ -38,7 +38,6 @@ Le fichier `Name.txt` est déjà rempli de 100 noms de célébrités françaises
   - Augmenter les temps d'attente (`WebDriverWait`, `time.sleep`) dans `main.py`.
   - Ajouter capture d'écran ou sauvegarde de `page_source` pour inspection (peut être ajouté au script).
 - Erreur `executable_path` : le script utilise `Service` (Selenium 4+). Veillez à avoir une version récente de Selenium.
-````markdown
 
 **Project**
 

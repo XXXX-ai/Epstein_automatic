@@ -17,7 +17,7 @@ from datetime import datetime
 SEARCH_URL = "https://www.justice.gov/epstein"
 NAMES_FILE = "Name.txt"
 LOG_FILE   = "Log.log"
-HEADLESS   = False          # ← Mets True quand tout marche bien
+HEADLESS   = False          # ← Set True when everything works
 
 # ────────────────────────────────────────────────
 # LOG
@@ -46,15 +46,15 @@ driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, 40)
 
 log("═"*90)
-log("DÉBUT RECHERCHE EPSTEIN – Version finale (test validé)")
-log(f"Headless : {HEADLESS}")
+log("EPSTEIN SEARCH START — Final version (validated test)")
+log(f"Headless: {HEADLESS}")
 log("═"*90)
 
-# 1. Chargement page
+# 1. Load page
 driver.get(SEARCH_URL)
 time.sleep(5)
 
-# 2. Bypass age gate + cookie banner (JS click = plus robuste)
+# 2. Bypass age gate + cookie banner (JS click = more robust)
 for selector in [
     "//*[contains(translate(text(),'YESNO','yesno'),'yes') or contains(text(),'18') or contains(text(),'Continue')]",
     "//button[contains(text(),'Accept') or contains(text(),'Agree') or contains(text(),'OK') or @id='accept']"
@@ -62,23 +62,23 @@ for selector in [
     try:
         btn = wait.until(EC.element_to_be_clickable((By.XPATH, selector)))
         driver.execute_script("arguments[0].click();", btn)
-        log(f"→ Élément bloquant cliqué via JS : {selector}")
+        log(f"→ Blocking element clicked via JS: {selector}")
         time.sleep(3)
         break
     except:
         continue
 
-# 3. Lecture des noms
+# 3. Read names
 with open(NAMES_FILE, encoding='utf-8') as f:
     names = [line.strip() for line in f if line.strip()]
-log(f"{len(names)} noms chargés")
+log(f"{len(names)} names loaded")
 
-# 4. Boucle principale
+# 4. Main loop
 for idx, name in enumerate(names, 1):
     log(f"[{idx:2d}/{len(names)}] → '{name}'")
 
     try:
-        # Champ texte
+        # Text field
         search_input = wait.until(EC.presence_of_element_located((By.ID, "searchInput")))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", search_input)
         time.sleep(1.2)
@@ -89,40 +89,58 @@ for idx, name in enumerate(names, 1):
         search_input.send_keys(name)
         time.sleep(1.0)
         search_input.send_keys(Keys.ENTER)
-        log("  → Recherche envoyée (ENTER)")
+        # ← no log here
 
-        # Bouton Search (sécurité supplémentaire)
+        # Search button (extra safety)
         try:
             btn = wait.until(EC.element_to_be_clickable((By.ID, "searchButton")))
             driver.execute_script("arguments[0].click();", btn)
-            log("  → Bouton #searchButton cliqué via JS")
+            # ← no log here
         except:
             pass
 
-        time.sleep(6.0)  # temps pour #results
+        time.sleep(6.0)  # time for #results
 
-        # Analyse résultats
+        # Analyze results
         results_div = driver.find_element(By.ID, "results")
         html_lower = results_div.get_attribute("innerHTML").lower()
 
-        no_result = any(x in html_lower for x in ["no results", "no matches", "nothing found", "0 results", "aucun résultat"])
+        no_result = any(x in html_lower for x in ["no results", "no matches", "nothing found", "0 results"]) 
 
-        if not no_result and len(results_div.find_elements(By.TAG_NAME, "a")) > 0:
-            log("  → TROUVÉ ✅")
+        # Approximate number of occurrences of the name in the results block
+        occurrences = html_lower.count(name.lower())
+
+        # Retrieve link texts (often titles or document names)
+        links = results_div.find_elements(By.TAG_NAME, "a")
+        doc_names = []
+        for link in links:
+            txt = link.text.strip()
+            if txt and len(txt) > 3:           # filtre éléments trop courts
+                doc_names.append(txt)
+
+        if not no_result and len(links) > 0:
+            log("  → FOUND ✅")
+            log(f"  → Approximate occurrences: {occurrences}")
+            if doc_names:
+                log("  → Documents / items found:")
+                for doc in doc_names:
+                    log(f"      • {doc}")
+            else:
+                log("  → No document titles retrieved")
         else:
-            log("  → Non trouvé ❌")
+            log("  → Not found ❌")
 
     except TimeoutException:
-        log("  → TIMEOUT sur le champ ou les résultats")
+        log("  → TIMEOUT on the input or results")
         driver.save_screenshot(f"error_timeout_{name}.png")
     except Exception as e:
-        log(f"  → Erreur : {type(e).__name__} → {str(e)}")
+        log(f"  → Error: {type(e).__name__} → {str(e)}")
         driver.save_screenshot(f"error_{name}.png")
 
     time.sleep(4 + (idx % 5))  # anti-ban
 
 log("═"*90)
-log("FIN DU SCAN – Résultats dans Log.log")
+log("SCAN FINISHED — Results in Log.log")
 log("═"*90)
 
 driver.quit()

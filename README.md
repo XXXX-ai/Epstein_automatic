@@ -30,6 +30,7 @@ python3 main.py
 ```
 
 Le script lira `Name.txt`, effectuera les recherches et écrira des lignes horodatées dans `Log.log`.
+Le fichier `Name.txt` est déjà rempli de 100 noms de célébrités françaises (modifiez-le à votre guise)
 
 **Dépannage**
 - TIMEOUT / résultats non chargés :
@@ -70,6 +71,7 @@ python3 main.py
 ```
 
 The script will read `Name.txt`, perform searches and write timestamped lines to `Log.log`.
+The `Name.txt` file is already filled with 100 names of French celebrities (modify it at your leisure)
 
 **Troubleshooting**
 - TIMEOUT / results not loaded:

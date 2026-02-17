@@ -39,6 +39,7 @@ Le fichier `Name.txt` est déjà rempli de 100 noms de célébrités françaises
   - Ajouter capture d'écran ou sauvegarde de `page_source` pour inspection (peut être ajouté au script).
 - Erreur `executable_path` : le script utilise `Service` (Selenium 4+). Veillez à avoir une version récente de Selenium.
 ````markdown
+
 **Project**
 
 This project automates searches on the justice.gov/epstein page using Selenium + ChromeDriver. It reads names from `Name.txt`, performs searches on the site and logs results to a log file.

@@ -17,7 +17,7 @@ from datetime import datetime
 SEARCH_URL = "https://www.justice.gov/epstein"
 NAMES_FILE = "Name.txt"
 LOG_FILE   = "Log.log"
-HEADLESS   = False          # ← Set True when everything works
+HEADLESS   = True          # ← Set True when everything works
 
 # ────────────────────────────────────────────────
 # LOG
@@ -46,8 +46,15 @@ driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, 40)
 
 log("═"*90)
-log("EPSTEIN SEARCH START — Final version (validated test)")
-log(f"Headless: {HEADLESS}")
+log("EPSTEIN SEARCH START")
+log("═"*90)
+ascii_art = r"""
+ ____  ____  ____  ____  ____  __  __ _        __   _  _  ____  __   _  _   __  ____  __  ___ 
+(  __)(  _ \/ ___)(_  _)(  __)(  )(  ( \ ___  / _\ / )( \(_  _)/  \ ( \/ ) / _\(_  _)(  )/ __)
+ ) _)  ) __/\___ \  )(   ) _)  )( /    /(___)/    \) \/ (  )( (  O )/ \/ \/    \ )(   )(( (__ 
+(____)(__)  (____/ (__) (____)(__)\_)__)     \_/\_/\____/ (__) \__/ \_)(_/\_/\_/(__) (__)\___) 
+"""
+log(ascii_art.strip())
 log("═"*90)
 
 # 1. Load page

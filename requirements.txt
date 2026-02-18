@@ -1,3 +1,4 @@
 selenium>=4.4.0
+rich>=14.0.0
 # Optional: aide pour télécharger automatiquement ChromeDriver
 # webdriver-manager>=3.8.5

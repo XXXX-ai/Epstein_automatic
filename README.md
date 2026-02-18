@@ -1,11 +1,10 @@
 **Projet**
 
-Ce projet automatise des recherches sur la page justice.gov/epstein en utilisant Selenium + ChromeDriver. Il lit des noms depuis `Name.txt`, effectue des recherches sur le site et enregistre les résultats dans un fichier de log.
+Ce projet automatise des recherches sur la page justice.gov/epstein en utilisant Selenium + ChromeDriver. Il lit des noms depuis `Name.txt`, et effectue des recherches sur le site
 
 **Fichiers importants**
 - `main.py` : script principal qui pilote Selenium et réalise les recherches.
 - `Name.txt` : liste des noms (une ligne par nom) à rechercher.
-- `Log.log` : fichier généré contenant les horodatages et le statut de chaque recherche.
 
 **Configuration**
 - `DRIVER_PATH` dans `main.py` : chemin vers `chromedriver` (ex. `/usr/bin/chromedriver`).
@@ -29,7 +28,7 @@ python3 -m pip install selenium
 python3 main.py
 ```
 
-Le script lira `Name.txt`, effectuera les recherches et écrira des lignes horodatées dans `Log.log`.
+
 Le fichier `Name.txt` est déjà rempli de 100 noms de célébrités françaises (modifiez-le à votre guise)
 
 **Dépannage**
@@ -41,12 +40,11 @@ Le fichier `Name.txt` est déjà rempli de 100 noms de célébrités françaises
 
 **Project**
 
-This project automates searches on the justice.gov/epstein page using Selenium + ChromeDriver. It reads names from `Name.txt`, performs searches on the site and logs results to a log file.
+This project automates searches on the justice.gov/epstein page using Selenium + ChromeDriver. It reads names from `Name.txt` and performs searches on the site
 
 **Important files**
 - `main.py` : main script that drives Selenium and performs searches.
 - `Name.txt` : list of names (one per line) to search for.
-- `Log.log` : generated file containing timestamps and status for each search.
 
 **Configuration**
 - `DRIVER_PATH` in `main.py` : path to `chromedriver` (e.g. `/usr/bin/chromedriver`).
@@ -70,7 +68,6 @@ python3 -m pip install selenium
 python3 main.py
 ```
 
-The script will read `Name.txt`, perform searches and write timestamped lines to `Log.log`.
 The `Name.txt` file is already filled with 100 names of French celebrities (modify it at your leisure)
 
 **Troubleshooting**

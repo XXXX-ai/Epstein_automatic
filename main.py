@@ -98,6 +98,7 @@ except Exception as e:
 console.rule(style="cyan")
 
 # 4. Boucle principale (sans barre de progression pour éviter les bugs d'affichage)
+results = []
 for idx, name in enumerate(names, 1):
     log(f"[{idx:2d}/{len(names)}] → '{name}'", style="bold white", emoji="🔍")
 
@@ -156,6 +157,14 @@ for idx, name in enumerate(names, 1):
                 width=PANEL_WIDTH
             ))
 
+            # Enregistrer le résultat dans la liste des résultats
+            results.append({
+                "name": name,
+                "found": True,
+                "occurrences": occurrences,
+                "documents": doc_names,
+            })
+
         else:
             console.print(Panel(
                 "[bold red]Non trouvé ❌[/]",
@@ -166,16 +175,44 @@ for idx, name in enumerate(names, 1):
                 width=PANEL_WIDTH
             ))
 
+            # Enregistrer le résultat non trouvé
+            results.append({
+                "name": name,
+                "found": False,
+                "occurrences": occurrences,
+                "documents": [],
+            })
+
     except TimeoutException:
         log(f"TIMEOUT sur le champ ou les résultats pour '{name}'", style="bold red", emoji="⚠️")
         driver.save_screenshot(f"error_timeout_{name}.png")
+        results.append({"name": name, "error": "Timeout"})
     except Exception as e:
         log(f"Erreur pour '{name}' : {type(e).__name__} → {str(e)}", style="bold red", emoji="❌")
         driver.save_screenshot(f"error_{name}.png")
+        results.append({"name": name, "error": f"{type(e).__name__}: {str(e)}"})
 
     time.sleep(4 + (idx % 5))
 
 # Fin
+# Écrire les résultats dans un fichier texte (utf-8)
+try:
+    out_file = "résultats.txt"
+    with open(out_file, "w", encoding="utf-8") as f:
+        for r in results:
+            name = r.get("name", "<unknown>")
+            if r.get("error"):
+                f.write(f"{name}\tERROR\t{r.get('error')}\n")
+            else:
+                found = "OUI" if r.get("found") else "NON"
+                occ = r.get("occurrences", 0)
+                docs = r.get("documents", []) or []
+                docs_str = "; ".join(docs) if docs else "-"
+                f.write(f"{name}\t{found}\tOccurrences:{occ}\tDocs:{docs_str}\n")
+    log(f"Résultats écrits dans {out_file}", style="bold green", emoji="💾")
+except Exception as e:
+    log(f"Impossible d'écrire le fichier de résultats : {e}", style="bold red", emoji="❌")
+
 console.rule(style="cyan")
 log("FIN DU SCAN", style="bold cyan", emoji="🏁")
 console.rule(style="cyan")

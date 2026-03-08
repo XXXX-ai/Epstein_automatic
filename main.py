@@ -1,220 +1,145 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import csv
+import time
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-import time
-from datetime import datetime
-
-# ────────────────────────────────────────────────
-# RICH – affichage console amélioré
-# ────────────────────────────────────────────────
+from selenium.common.exceptions import TimeoutException
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
+
+# Installation requise : pip install selenium rich fake-useragent
+from fake_useragent import UserAgent
 
 console = Console()
 
+# ────────────────────────────────────────────────
+# CONFIGURATION
+# ────────────────────────────────────────────────
+SEARCH_URL = "https://www.justice.gov/epstein"
+NAMES_FILE = "Name.txt"
+OUTPUT_CSV = "resultats.csv"
+HEADLESS = False  # Mettre à True pour la discrétion
+WAIT_TIME = 15    # Secondes max d'attente pour le chargement des éléments
+
 def log(msg, style="white", emoji=""):
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = datetime.now().strftime("%H:%M:%S")
     console.print(f"[dim]{ts}[/dim] {emoji} {msg}", style=style)
 
 # ────────────────────────────────────────────────
-# ASCII ART
+# SETUP DRIVER
 # ────────────────────────────────────────────────
-ascii_art = r"""
- ____  ____  ____  ____  ____  __  __ _        __   _  _  ____  __   _  _   __  ____  __  ___ 
-(  __)(  _ \/ ___)(_  _)(  __)(  )(  ( \ ___  / _\ / )( \(_  _)/  \ ( \/ ) / _\(_  _)(  )/ __)
- ) _)  ) __/\___ \  )(   ) _)  )( /    /(___)/    \) \/ (  )( (  O )/ \/ \/    \ )(   )(( (__ 
-(____)(__)  (____/ (__) (____)(__)\_)__)     \_/\_/\____/ (__) \__/ \_)(_/\_/\_/(__) (__)\___) 
-"""
-
-# ────────────────────────────────────────────────
-# CONFIG
-# ────────────────────────────────────────────────
-
-SEARCH_URL = "https://www.justice.gov/epstein"
-NAMES_FILE = "Name.txt"
-HEADLESS   = False          # ← Mets True quand tout marche bien
-PANEL_WIDTH = 90            # ← Largeur maximale fixe des panneaux (ajuste si besoin : 80, 100...)
+def get_driver():
+    options = webdriver.ChromeOptions()
+    if HEADLESS:
+        options.add_argument("--headless=new")
+    
+    ua = UserAgent()
+    options.add_argument(f"user-agent={ua.random}")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    
+    driver = webdriver.Chrome(options=options)
+    return driver
 
 # ────────────────────────────────────────────────
-# SELENIUM SETUP
+# LOGIQUE PRINCIPALE
 # ────────────────────────────────────────────────
+def run_scanner():
+    driver = get_driver()
+    wait = WebDriverWait(driver, WAIT_TIME)
+    
+    console.rule("[bold cyan]EPSTEIN SCANNER V2[/bold cyan]")
 
-options = webdriver.ChromeOptions()
-if HEADLESS:
-    options.add_argument("--headless=new")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--window-size=1920,1200")
-options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
-
-driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, 40)
-
-# Début – affichage stylé
-console.rule("RECHERCHE EPSTEIN – DOJ", style="bold cyan")
-log("DÉBUT DU SCAN", style="bold cyan", emoji="🚀")
-
-# Affichage propre de l'ASCII art
-console.print(ascii_art, style="dim cyan", markup=False)
-
-log(f"Fichier noms : {NAMES_FILE}", style="dim")
-console.rule(style="cyan")
-
-# 1. Chargement page
-log(f"Ouverture {SEARCH_URL}...", style="blue")
-driver.get(SEARCH_URL)
-time.sleep(5)
-
-# 2. Bypass age gate + cookie banner
-for selector in [
-    "//*[contains(translate(text(),'YESNO','yesno'),'yes') or contains(text(),'18') or contains(text(),'Continue')]",
-    "//button[contains(text(),'Accept') or contains(text(),'Agree') or contains(text(),'OK') or @id='accept']"
-]:
+    # 1. Lecture et Nettoyage des noms
     try:
-        btn = wait.until(EC.element_to_be_clickable((By.XPATH, selector)))
-        driver.execute_script("arguments[0].click();", btn)
-        log(f"Élément bloquant cliqué via JS", style="green", emoji="✅")
-        time.sleep(3)
-        break
-    except:
-        continue
-
-# 3. Lecture des noms
-try:
-    with open(NAMES_FILE, encoding='utf-8') as f:
-        names = [line.strip() for line in f if line.strip()]
-    log(f"{len(names)} noms chargés", style="bold green", emoji="📋")
-except Exception as e:
-    log(f"Erreur lecture {NAMES_FILE} : {e}", style="bold red", emoji="❌")
-    driver.quit()
-    exit(1)
-
-console.rule(style="cyan")
-
-# 4. Boucle principale (sans barre de progression pour éviter les bugs d'affichage)
-results = []
-for idx, name in enumerate(names, 1):
-    log(f"[{idx:2d}/{len(names)}] → '{name}'", style="bold white", emoji="🔍")
-
-    try:
-        search_input = wait.until(EC.presence_of_element_located((By.ID, "searchInput")))
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", search_input)
-        time.sleep(1.2)
-        driver.execute_script("arguments[0].focus();", search_input)
-
-        search_input.clear()
-        time.sleep(0.8)
-        search_input.send_keys(name)
-        time.sleep(1.0)
-        search_input.send_keys(Keys.ENTER)
-
-        try:
-            btn = wait.until(EC.element_to_be_clickable((By.ID, "searchButton")))
-            driver.execute_script("arguments[0].click();", btn)
-        except:
-            pass
-
-        time.sleep(6.0)
-
-        # Analyse résultats
-        results_div = driver.find_element(By.ID, "results")
-        html_lower = results_div.get_attribute("innerHTML").lower()
-
-        no_result = any(x in html_lower for x in ["no results", "no matches", "nothing found", "0 results", "aucun résultat"])
-
-        occurrences = html_lower.count(name.lower())
-
-        links = results_div.find_elements(By.TAG_NAME, "a")
-        doc_names = [link.text.strip() for link in links if link.text.strip() and len(link.text.strip()) > 3]
-
-        if not no_result and len(links) > 0:
-            lines = [
-                "[bold green]TROUVÉ ✅[/]",
-                f"Occurrences approximatives : [cyan]{occurrences}[/cyan]",
-                ""
-            ]
-
-            if doc_names:
-                lines.append("[bold]Documents / éléments trouvés :[/]")
-                for doc in doc_names:
-                    display_doc = (doc[:65] + "...") if len(doc) > 65 else doc
-                    lines.append(f"  • {display_doc}")
-            else:
-                lines.append("Aucun titre de document récupéré")
-
-            console.print(Panel(
-                "\n".join(lines),
-                title=f" {name} ",
-                border_style="green",
-                expand=False,
-                padding=(1, 3),
-                width=PANEL_WIDTH
-            ))
-
-            # Enregistrer le résultat dans la liste des résultats
-            results.append({
-                "name": name,
-                "found": True,
-                "occurrences": occurrences,
-                "documents": doc_names,
-            })
-
-        else:
-            console.print(Panel(
-                "[bold red]Non trouvé ❌[/]",
-                title=f" {name} ",
-                border_style="red",
-                expand=False,
-                padding=(1, 3),
-                width=PANEL_WIDTH
-            ))
-
-            # Enregistrer le résultat non trouvé
-            results.append({
-                "name": name,
-                "found": False,
-                "occurrences": occurrences,
-                "documents": [],
-            })
-
-    except TimeoutException:
-        log(f"TIMEOUT sur le champ ou les résultats pour '{name}'", style="bold red", emoji="⚠️")
-        driver.save_screenshot(f"error_timeout_{name}.png")
-        results.append({"name": name, "error": "Timeout"})
+        with open(NAMES_FILE, "r", encoding="utf-8") as f:
+            raw_names = [line.strip() for line in f if line.strip()]
+        # Suppression des doublons tout en gardant l'ordre 
+        names = list(dict.fromkeys(raw_names))
+        log(f"{len(names)} noms uniques chargés (Doublons ignorés)", style="green", emoji="📋")
     except Exception as e:
-        log(f"Erreur pour '{name}' : {type(e).__name__} → {str(e)}", style="bold red", emoji="❌")
-        driver.save_screenshot(f"error_{name}.png")
-        results.append({"name": name, "error": f"{type(e).__name__}: {str(e)}"})
+        log(f"Erreur fichier : {e}", style="bold red")
+        return
 
-    time.sleep(4 + (idx % 5))
+    # 2. Initialisation du CSV
+    results_data = []
+    
+    # 3. Accès au site et passage de l'Age Gate
+    log(f"Connexion à {SEARCH_URL}...", style="blue")
+    driver.get(SEARCH_URL)
+    
+    try:
+        # Attente d'un bouton de confirmation type "Yes" ou "Continue"
+        confirm_xpath = "//*[contains(translate(text(),'YES','yes'),'yes') or contains(text(),'18')]"
+        btn = wait.until(EC.element_to_be_clickable((By.XPATH, confirm_xpath)))
+        btn.click()
+        log("Accès autorisé (Age Gate passé)", style="green", emoji="🔓")
+    except TimeoutException:
+        log("Aucune barrière d'âge détectée, passage à la suite.", style="dim")
 
-# Fin
-# Écrire les résultats dans un fichier texte (utf-8)
-try:
-    out_file = "résultats.txt"
-    with open(out_file, "w", encoding="utf-8") as f:
-        for r in results:
-            name = r.get("name", "<unknown>")
-            if r.get("error"):
-                f.write(f"{name}\tERROR\t{r.get('error')}\n")
-            else:
-                found = "OUI" if r.get("found") else "NON"
-                occ = r.get("occurrences", 0)
-                docs = r.get("documents", []) or []
-                docs_str = "; ".join(docs) if docs else "-"
-                f.write(f"{name}\t{found}\tOccurrences:{occ}\tDocs:{docs_str}\n")
-    log(f"Résultats écrits dans {out_file}", style="bold green", emoji="💾")
-except Exception as e:
-    log(f"Impossible d'écrire le fichier de résultats : {e}", style="bold red", emoji="❌")
+    # 4. Boucle de recherche
+    for idx, name in enumerate(names, 1):
+        log(f"[{idx}/{len(names)}] Recherche : [bold]{name}[/bold]", emoji="🔍")
+        
+        try:
+            # Localisation du champ de recherche
+            search_input = wait.until(EC.presence_of_element_located((By.ID, "searchInput")))
+            search_input.clear()
+            search_input.send_keys(name)
+            search_input.send_keys(Keys.ENTER)
 
-console.rule(style="cyan")
-log("FIN DU SCAN", style="bold cyan", emoji="🏁")
-console.rule(style="cyan")
+            # Attente que les résultats soient mis à jour (vérifie le conteneur)
+            time.sleep(3) # Petit délai de sécurité pour le rafraîchissement DOM
+            results_container = wait.until(EC.presence_of_element_located((By.ID, "results")))
+            
+            # Analyse des résultats
+            links = results_container.find_elements(By.TAG_NAME, "a")
+            found_docs = [link.text.strip() for link in links if link.text.strip()]
+            
+            status = "OUI" if found_docs else "NON"
+            color = "green" if found_docs else "red"
+            
+            # Affichage console
+            panel_content = f"Trouvé : [bold]{status}[/bold]\nDocuments : {len(found_docs)}"
+            if found_docs:
+                panel_content += f"\n[dim]Détails : {', '.join(found_docs[:3])}...[/dim]"
+            
+            console.print(Panel(panel_content, title=name, border_style=color, expand=False))
 
-driver.quit()
+            # Stockage
+            results_data.append({
+                "Nom": name,
+                "Trouvé": status,
+                "Nb_Docs": len(found_docs),
+                "Détails": "; ".join(found_docs)
+            })
+
+        except Exception as e:
+            log(f"Erreur technique pour {name} : {str(e)[:50]}...", style="bold red", emoji="⚠️")
+            results_data.append({"Nom": name, "Trouvé": "ERREUR", "Nb_Docs": 0, "Détails": str(e)})
+
+        # Pause variable pour éviter le bannissement IP
+        time.sleep(2)
+
+    # 5. Export des résultats
+    try:
+        with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.DictWriter(f, fieldnames=["Nom", "Trouvé", "Nb_Docs", "Détails"], delimiter=";")
+            writer.writeheader()
+            writer.writerows(results_data)
+        log(f"Rapport généré : {OUTPUT_CSV}", style="bold green", emoji="💾")
+    except Exception as e:
+        log(f"Erreur export CSV : {e}", style="red")
+
+    driver.quit()
+    console.rule("[bold cyan]SCAN TERMINÉ[/bold cyan]")
+
+if __name__ == "__main__":
+    run_scanner()

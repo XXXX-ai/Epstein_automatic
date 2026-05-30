@@ -83,5 +83,3 @@ The `Name.txt` file is already filled with 100 names of French celebrities (modi
 
 **License**
 - For personal use. Adjust as needed.
-
-````
